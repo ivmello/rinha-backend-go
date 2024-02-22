@@ -1,16 +1,16 @@
 package api
 
 import (
-	"database/sql"
 	"log"
 
 	"rinha-backend-go/internal/core"
 	"rinha-backend-go/internal/infra/database"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Run(conn *sql.DB) {
+func Run(conn *pgxpool.Pool) {
 	app := fiber.New()
 	accountRepository := database.NewAccountRepository(conn)
 	transactionRepository := database.NewTransactionRepository(conn)

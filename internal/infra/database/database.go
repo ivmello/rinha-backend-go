@@ -1,20 +1,20 @@
 package database
 
 import (
-	"database/sql"
-	"fmt"
+	"context"
+	"log"
 	"os"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func New() (*sql.DB, error) {
+func New() (*pgxpool.Pool, error) {
 	connStr := os.Getenv("DATABASE_URL")
-	db, err := sql.Open("pgx", connStr)
+	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 		return nil, err
 	}
-	db.SetMaxOpenConns(200)
-	return db, nil
+	return pool, nil
 }

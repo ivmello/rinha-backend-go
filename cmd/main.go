@@ -18,6 +18,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	defer conn.Close()
 	api.Run(conn)
 }

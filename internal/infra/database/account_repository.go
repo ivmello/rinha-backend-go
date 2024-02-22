@@ -1,37 +1,42 @@
 package database
 
 import (
-	"database/sql"
-	"time"
+	"context"
 
 	"rinha-backend-go/internal/core"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type accountRepository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewAccountRepository(db *sql.DB) core.AccountRepository {
+func NewAccountRepository(db *pgxpool.Pool) core.AccountRepository {
 	return &accountRepository{
 		db: db,
 	}
 }
 
-func (r *accountRepository) GetByID(id int) (*core.Account, error) {
-	rows := r.db.QueryRow("SELECT account_limit, balance FROM accounts WHERE id = $1", id)
-	var accountLimit int
-	var balance int
-	err := rows.Scan(&accountLimit, &balance)
-	if err == sql.ErrNoRows {
-		return nil, core.ErrAccountNotFound
-	}
+func (r *accountRepository) GetByID(ctx context.Context, id int) (*core.Account, error) {
+	var account core.Account
+	err := r.db.QueryRow(ctx, "SELECT account_limit, balance FROM accounts WHERE id = $1;", id).Scan(&account.Limit, &account.Balance)
 	if err != nil {
 		return nil, err
 	}
-	return &core.Account{
-		ID:      id,
-		Date:    time.Now().Format(time.RFC3339Nano),
-		Limit:   accountLimit,
-		Balance: balance,
-	}, nil
+	transactions := make([]core.Transaction, 0)
+	rows, err := r.db.Query(ctx, "SELECT amount, operation, description, created_at FROM transactions WHERE account_id = $1 ORDER BY created_at DESC LIMIT 10;", id)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var transaction core.Transaction
+		err := rows.Scan(&transaction.Amount, &transaction.Operation, &transaction.Description, &transaction.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, transaction)
+	}
+	account.Transactions = transactions
+	return &account, nil
 }

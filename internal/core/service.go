@@ -1,10 +1,13 @@
 package core
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Service interface {
-	GetBalance(id int) (*GetBalanceOutput, error)
-	CreateTransaction(accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error)
+	GetBalance(ctx context.Context, id int) (*GetBalanceOutput, error)
+	CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error)
 }
 
 type service struct {
@@ -16,23 +19,16 @@ func NewService(accountRepository AccountRepository, transactionRepository Trans
 	return &service{accountRepository, transactionRepository}
 }
 
-func (s *service) GetBalance(id int) (*GetBalanceOutput, error) {
-	account, err := s.accountRepository.GetByID(id)
+func (s *service) GetBalance(ctx context.Context, id int) (*GetBalanceOutput, error) {
+	account, err := s.accountRepository.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if account == nil {
-		return nil, ErrAccountNotFound
-	}
-	transactions, err := s.transactionRepository.GetByAccountID(id)
-	if err != nil {
-		return nil, err
-	}
-	var transactionsOutput []TransactionOutput
-	for _, transaction := range transactions {
+	transactionsOutput := make([]TransactionOutput, 0)
+	for _, transaction := range account.Transactions {
 		transactionsOutput = append(transactionsOutput, TransactionOutput{
 			Amount:      transaction.Amount,
-			Operation:   transaction.Operation,
+			Operation:   string(transaction.Operation),
 			Description: transaction.Description,
 			Date:        transaction.CreatedAt.Format(time.RFC3339Nano),
 		})
@@ -40,7 +36,7 @@ func (s *service) GetBalance(id int) (*GetBalanceOutput, error) {
 	output := &GetBalanceOutput{
 		Balance: Balance{
 			Total: account.Balance,
-			Date:  account.Date,
+			Date:  account.Date.UTC().Format(time.RFC3339),
 			Limit: account.Limit,
 		},
 		Transactions: transactionsOutput,
@@ -48,19 +44,19 @@ func (s *service) GetBalance(id int) (*GetBalanceOutput, error) {
 	return output, nil
 }
 
-func (s *service) CreateTransaction(accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error) {
-	if input.Operation != "d" && input.Operation != "c" {
-		return nil, ErrInvalidOperation
-	}
+func (s *service) CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error) {
 	transaction := &Transaction{
 		AccountID:   accountID,
 		Amount:      input.Amount,
-		Operation:   input.Operation,
+		Operation:   Operation(input.Operation),
 		Description: input.Description,
 	}
-	accountResponse, err := s.transactionRepository.Create(transaction)
-	if err != nil {
+	if err := transaction.Validate(); err != nil {
 		return nil, err
+	}
+	accountResponse, err := s.transactionRepository.Create(ctx, transaction)
+	if err != nil {
+		return nil, ErrInvalidTransaction
 	}
 	output := &CreateTransactionOutput{
 		Balance: accountResponse.Balance,

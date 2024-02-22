@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"rinha-backend-go/internal/core"
 
@@ -24,31 +26,50 @@ func NewHandler(service core.Service) Handler {
 
 func (h *handler) GetBalance(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))
-	output, err := h.service.GetBalance(id)
+	if id < 1 || id > 5 {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	output, err := h.service.GetBalance(ctx, id)
 	if err != nil {
 		if err == core.ErrAccountNotFound {
-			return c.Status(http.StatusNotFound).JSON(err.Error())
+			return c.SendStatus(http.StatusNotFound)
 		}
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		return c.SendStatus(http.StatusBadRequest)
 	}
 	return c.Status(http.StatusOK).JSON(output)
 }
 
 func (h *handler) CreateTransaction(c *fiber.Ctx) error {
-	var input core.CreateTransactionInput
 	accountID, _ := strconv.Atoi(c.Params("id"))
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+	if accountID <= 0 || accountID > 5 {
+		return c.SendStatus(http.StatusNotFound)
 	}
-	output, err := h.service.CreateTransaction(accountID, input)
+	var input core.CreateTransactionInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+	if input.Operation != string(core.Debit) && input.Operation != string(core.Credit) {
+		return c.SendStatus(http.StatusUnprocessableEntity)
+	}
+	if input.Amount <= 0 {
+		return c.SendStatus(http.StatusUnprocessableEntity)
+	}
+	if len(input.Description) <= 1 || len(input.Description) > 10 {
+		return c.SendStatus(http.StatusUnprocessableEntity)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	output, err := h.service.CreateTransaction(ctx, accountID, input)
 	if err != nil {
 		if err == core.ErrAccountNotFound {
-			return c.Status(http.StatusNotFound).JSON(err.Error())
+			return c.SendStatus(http.StatusNotFound)
 		}
-		if err == core.ErrInsufficientFunds || err == core.ErrInvalidOperation {
-			return c.Status(http.StatusUnprocessableEntity).JSON(err.Error())
+		if err == core.ErrInsufficientFunds || err == core.ErrInvalidOperation || err == core.ErrInvalidTransaction {
+			return c.SendStatus(http.StatusUnprocessableEntity)
 		}
-		return c.Status(http.StatusBadRequest).JSON(err.Error())
+		return c.SendStatus(http.StatusBadRequest)
 	}
 	return c.Status(http.StatusOK).JSON(output)
 }
