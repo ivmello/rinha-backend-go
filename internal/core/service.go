@@ -30,7 +30,7 @@ func (s *service) GetBalance(ctx context.Context, id int) (GetBalanceOutput, err
 			Amount:      transaction.Amount,
 			Operation:   string(transaction.Operation),
 			Description: transaction.Description,
-			Date:        transaction.CreatedAt.Format(time.RFC3339Nano),
+			Date:        transaction.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	output := GetBalanceOutput{
@@ -51,9 +51,6 @@ func (s *service) CreateTransaction(ctx context.Context, accountID int, input Cr
 		Operation:   Operation(input.Operation),
 		Description: input.Description,
 	}
-	// if err := transaction.Validate(); err != nil {
-	// 	return CreateTransactionOutput{}, err
-	// }
 	accountResponse, err := s.transactionRepository.Create(ctx, transaction)
 	if err != nil {
 		return CreateTransactionOutput{}, ErrInvalidTransaction
