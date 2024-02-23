@@ -4,9 +4,6 @@ services:
   api01: &api
     image: ivmello/rinha-backend-2024-q1:latest
     hostname: api01
-    build:
-      context: .
-      dockerfile: ./Dockerfile
     environment:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/rinha?sslmode=disable
     ports:
