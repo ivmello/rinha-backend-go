@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"os"
 
 	"rinha-backend-go/internal/core"
 	"rinha-backend-go/internal/infra/database"
@@ -18,5 +19,6 @@ func Run(conn *pgxpool.Pool) {
 	app := fiber.New()
 	app.Get("/clientes/:id/extrato", handler.GetBalance)
 	app.Post("/clientes/:id/transacoes", handler.CreateTransaction)
-	log.Fatal(app.Listen(":8080"))
+	port := os.Getenv("PORT")
+	log.Fatal(app.Listen(":" + port))
 }
