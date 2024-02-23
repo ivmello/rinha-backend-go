@@ -2,8 +2,11 @@ version: "3.5"
 
 services:
   api01: &api
-    image: ivmello/rinha-backend-2024-q1:latest
     hostname: api01
+    # image: ivmello/rinha-backend-2024-q1:latest
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     environment:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/rinha?sslmode=disable
     ports:
@@ -35,7 +38,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: "10MB"
+          memory: "20MB"
 
   db:
     image: postgres:latest
@@ -49,7 +52,8 @@ services:
       - "5432:5432"
     volumes:
       - ./scripts/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    command: postgres -c max_connections=1000 -c shared_buffers=256MB -c synchronous_commit=off -c fsync=off
+      - ./scripts/postgres/postgresql.conf:/docker-entrypoint-initdb.d/postgresql.conf
+    command: postgres -c config_file=/docker-entrypoint-initdb.d/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 15s
@@ -58,7 +62,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: "500MB"
+          memory: "490MB"
 
 networks:
   default:

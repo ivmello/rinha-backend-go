@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX transactions_id_idx ON "transactions" USING HASH(id);
 CREATE INDEX transactions_account_id_idx ON "transactions" USING HASH(account_id);
 
+CREATE EXTENSION IF NOT EXISTS pg_prewarm;
+SELECT pg_prewarm('accounts');
+SELECT pg_prewarm('transactions');
+
 CREATE OR REPLACE PROCEDURE create_transaction(
   account_id INTEGER,
   amount INTEGER,
