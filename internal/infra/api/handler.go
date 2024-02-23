@@ -2,18 +2,18 @@ package api
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"rinha-backend-go/internal/core"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type Handler interface {
-	GetBalance(w http.ResponseWriter, r *http.Request)
-	CreateTransaction(w http.ResponseWriter, r *http.Request)
+	GetBalance(c *fiber.Ctx) error
+	CreateTransaction(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -24,85 +24,58 @@ func NewHandler(service core.Service) Handler {
 	return &handler{service}
 }
 
-func (h *handler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
+func (h *handler) GetBalance(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
 	if id < 1 || id > 5 {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		return c.SendStatus(http.StatusNotFound)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	output, err := h.service.GetBalance(ctx, id)
 	if err != nil {
 		if err == core.ErrAccountNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return c.SendStatus(http.StatusNotFound)
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return c.SendStatus(http.StatusInternalServerError)
 	}
-	response, err := json.Marshal(&output)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, string(response))
+	return c.Status(http.StatusOK).JSON(output)
 }
 
-func (h *handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
+func (h *handler) CreateTransaction(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return c.SendStatus(http.StatusBadRequest)
 	}
 	if id < 1 || id > 5 {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		return c.SendStatus(http.StatusNotFound)
 	}
 	var input core.CreateTransactionInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.SendStatus(http.StatusBadRequest)
 	}
 	if input.Amount < 1 {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
+		return c.SendStatus(http.StatusUnprocessableEntity)
 	}
 	if input.Operation != string(core.Debit) && input.Operation != string(core.Credit) {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
+		return c.SendStatus(http.StatusUnprocessableEntity)
 	}
 	if len(input.Description) < 1 || len(input.Description) > 10 {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
+		return c.SendStatus(http.StatusUnprocessableEntity)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	output, err := h.service.CreateTransaction(ctx, id, input)
 	if err != nil {
 		if err == core.ErrAccountNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return c.SendStatus(http.StatusNotFound)
 		}
 		if err == core.ErrInsufficientFunds || err == core.ErrInvalidOperation || err == core.ErrInvalidTransaction {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			return
+			return c.SendStatus(http.StatusUnprocessableEntity)
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return c.SendStatus(http.StatusInternalServerError)
 	}
-	response, err := json.Marshal(&output)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, string(response))
+	return c.Status(http.StatusOK).JSON(output)
 }

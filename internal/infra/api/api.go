@@ -1,11 +1,12 @@
 package api
 
 import (
-	"net/http"
+	"log"
 
 	"rinha-backend-go/internal/core"
 	"rinha-backend-go/internal/infra/database"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,8 +15,8 @@ func Run(conn *pgxpool.Pool) {
 	transactionRepository := database.NewTransactionRepository(conn)
 	service := core.NewService(accountRepository, transactionRepository)
 	handler := NewHandler(service)
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /clientes/{id}/extrato", handler.GetBalance)
-	mux.HandleFunc("POST /clientes/{id}/transacoes", handler.CreateTransaction)
-	http.ListenAndServe(":8080", mux)
+	app := fiber.New()
+	app.Get("/clientes/:id/extrato", handler.GetBalance)
+	app.Post("/clientes/:id/transacoes", handler.CreateTransaction)
+	log.Fatal(app.Listen(":8080"))
 }
