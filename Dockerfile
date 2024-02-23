@@ -8,7 +8,7 @@ COPY ./internal ./internal
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o ./bin/main ./cmd/main.go
 
-FROM alpine:3.14.10
+FROM alpine:latest
 EXPOSE 8080
 COPY --from=builder /app/bin/main .
 
