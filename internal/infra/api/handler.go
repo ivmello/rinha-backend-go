@@ -36,9 +36,6 @@ func (h *handler) GetBalance(c *fiber.Ctx) error {
 	defer cancel()
 	output, err := h.service.GetBalance(ctx, id)
 	if err != nil {
-		if err == core.ErrAccountNotFound {
-			return c.SendStatus(http.StatusNotFound)
-		}
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 	return c.Status(http.StatusOK).JSON(output)

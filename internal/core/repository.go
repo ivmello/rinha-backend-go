@@ -3,9 +3,9 @@ package core
 import "context"
 
 type AccountRepository interface {
-	GetByID(ctx context.Context, id int) (Account, error)
+	GetBalance(ctx context.Context, id int) (map[string]interface{}, error)
 }
 
 type TransactionRepository interface {
-	Create(ctx context.Context, transaction Transaction) (Account, error)
+	Create(ctx context.Context, id int, input CreateTransactionInput) (map[string]interface{}, error)
 }

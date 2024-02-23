@@ -2,7 +2,7 @@ down:
 	docker-compose down
 
 up:
-	docker-compose up --build
+	docker-compose up --build --remove-orphans
 
 stats:
 	docker stats

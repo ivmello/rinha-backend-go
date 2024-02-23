@@ -3,8 +3,8 @@ package core
 import "errors"
 
 var (
-	ErrInvalidTransaction = errors.New("invalid transaction")
-	ErrAccountNotFound    = errors.New("account not found")
-	ErrInsufficientFunds  = errors.New("insufficient funds")
-	ErrInvalidOperation   = errors.New("invalid operation")
+	ErrInvalidTransaction = errors.New("INVALID_TRANSACTION")
+	ErrAccountNotFound    = errors.New("ACCOUNT_NOT_FOUND")
+	ErrInsufficientFunds  = errors.New("INSUFFICIENT_FUNDS")
+	ErrInvalidOperation   = errors.New("INVALID_OPERATION")
 )
