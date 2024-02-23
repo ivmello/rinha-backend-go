@@ -70,15 +70,15 @@ func (h *handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if input.Amount < 1 {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
 	if input.Operation != string(core.Debit) && input.Operation != string(core.Credit) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	if input.Amount <= 0 {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
-	}
-	if len(input.Description) <= 1 || len(input.Description) > 10 {
+	if len(input.Description) < 1 || len(input.Description) > 10 {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}

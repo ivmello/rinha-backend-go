@@ -6,8 +6,8 @@ import (
 )
 
 type Service interface {
-	GetBalance(ctx context.Context, id int) (*GetBalanceOutput, error)
-	CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error)
+	GetBalance(ctx context.Context, id int) (GetBalanceOutput, error)
+	CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (CreateTransactionOutput, error)
 }
 
 type service struct {
@@ -19,10 +19,10 @@ func NewService(accountRepository AccountRepository, transactionRepository Trans
 	return &service{accountRepository, transactionRepository}
 }
 
-func (s *service) GetBalance(ctx context.Context, id int) (*GetBalanceOutput, error) {
+func (s *service) GetBalance(ctx context.Context, id int) (GetBalanceOutput, error) {
 	account, err := s.accountRepository.GetByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return GetBalanceOutput{}, err
 	}
 	transactionsOutput := make([]TransactionOutput, 0)
 	for _, transaction := range account.Transactions {
@@ -33,7 +33,7 @@ func (s *service) GetBalance(ctx context.Context, id int) (*GetBalanceOutput, er
 			Date:        transaction.CreatedAt.Format(time.RFC3339Nano),
 		})
 	}
-	output := &GetBalanceOutput{
+	output := GetBalanceOutput{
 		Balance: Balance{
 			Total: account.Balance,
 			Date:  account.Date.UTC().Format(time.RFC3339),
@@ -44,21 +44,21 @@ func (s *service) GetBalance(ctx context.Context, id int) (*GetBalanceOutput, er
 	return output, nil
 }
 
-func (s *service) CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (*CreateTransactionOutput, error) {
-	transaction := &Transaction{
+func (s *service) CreateTransaction(ctx context.Context, accountID int, input CreateTransactionInput) (CreateTransactionOutput, error) {
+	transaction := Transaction{
 		AccountID:   accountID,
 		Amount:      input.Amount,
 		Operation:   Operation(input.Operation),
 		Description: input.Description,
 	}
-	if err := transaction.Validate(); err != nil {
-		return nil, err
-	}
+	// if err := transaction.Validate(); err != nil {
+	// 	return CreateTransactionOutput{}, err
+	// }
 	accountResponse, err := s.transactionRepository.Create(ctx, transaction)
 	if err != nil {
-		return nil, ErrInvalidTransaction
+		return CreateTransactionOutput{}, ErrInvalidTransaction
 	}
-	output := &CreateTransactionOutput{
+	output := CreateTransactionOutput{
 		Balance: accountResponse.Balance,
 		Limit:   accountResponse.Limit,
 	}

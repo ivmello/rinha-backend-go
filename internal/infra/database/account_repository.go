@@ -18,25 +18,25 @@ func NewAccountRepository(db *pgxpool.Pool) core.AccountRepository {
 	}
 }
 
-func (r *accountRepository) GetByID(ctx context.Context, id int) (*core.Account, error) {
+func (r *accountRepository) GetByID(ctx context.Context, id int) (core.Account, error) {
 	var account core.Account
 	err := r.db.QueryRow(ctx, "SELECT account_limit, balance FROM accounts WHERE id = $1;", id).Scan(&account.Limit, &account.Balance)
 	if err != nil {
-		return nil, err
+		return core.Account{}, err
 	}
 	transactions := make([]core.Transaction, 0)
 	rows, err := r.db.Query(ctx, "SELECT amount, operation, description, created_at FROM transactions WHERE account_id = $1 ORDER BY created_at DESC LIMIT 10;", id)
 	if err != nil {
-		return nil, err
+		return core.Account{}, err
 	}
 	for rows.Next() {
 		var transaction core.Transaction
 		err := rows.Scan(&transaction.Amount, &transaction.Operation, &transaction.Description, &transaction.CreatedAt)
 		if err != nil {
-			return nil, err
+			return core.Account{}, err
 		}
 		transactions = append(transactions, transaction)
 	}
 	account.Transactions = transactions
-	return &account, nil
+	return account, nil
 }

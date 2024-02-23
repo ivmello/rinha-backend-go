@@ -18,7 +18,7 @@ func NewTransactionRepository(db *pgxpool.Pool) core.TransactionRepository {
 	}
 }
 
-func (r *transactionRepository) Create(ctx context.Context, transaction *core.Transaction) (*core.Account, error) {
+func (r *transactionRepository) Create(ctx context.Context, transaction core.Transaction) (core.Account, error) {
 	amount := transaction.Amount
 	if transaction.Operation == core.Debit {
 		amount = amount * -1
@@ -26,12 +26,12 @@ func (r *transactionRepository) Create(ctx context.Context, transaction *core.Tr
 	var updatedBalance, updatedLimit *int
 	err := r.db.QueryRow(ctx, "CALL create_transaction($1, $2, $3, $4)", transaction.AccountID, amount, transaction.Operation, transaction.Description).Scan(&updatedBalance, &updatedLimit)
 	if err != nil {
-		return nil, err
+		return core.Account{}, err
 	}
 	if updatedBalance == nil {
-		return nil, core.ErrInvalidTransaction
+		return core.Account{}, core.ErrInvalidTransaction
 	}
-	return &core.Account{
+	return core.Account{
 		Balance: *updatedBalance,
 		Limit:   *updatedLimit,
 	}, nil
