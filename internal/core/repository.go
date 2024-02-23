@@ -3,7 +3,7 @@ package core
 import "context"
 
 type AccountRepository interface {
-	GetByID(ctx context.Context, id int) (Account, error)
+	GetByID(ctx context.Context, id int) ([]byte, error)
 }
 
 type TransactionRepository interface {

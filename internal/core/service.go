@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"time"
+	"encoding/json"
 )
 
 type Service interface {
@@ -24,22 +24,9 @@ func (s *service) GetBalance(ctx context.Context, id int) (GetBalanceOutput, err
 	if err != nil {
 		return GetBalanceOutput{}, err
 	}
-	transactionsOutput := make([]TransactionOutput, 0)
-	for _, transaction := range account.Transactions {
-		transactionsOutput = append(transactionsOutput, TransactionOutput{
-			Amount:      transaction.Amount,
-			Operation:   string(transaction.Operation),
-			Description: transaction.Description,
-			Date:        transaction.CreatedAt.Format(time.RFC3339),
-		})
-	}
-	output := GetBalanceOutput{
-		Balance: Balance{
-			Total: account.Balance,
-			Date:  account.Date.UTC().Format(time.RFC3339),
-			Limit: account.Limit,
-		},
-		Transactions: transactionsOutput,
+	var output GetBalanceOutput
+	if err := json.Unmarshal(account, &output); err != nil {
+		return GetBalanceOutput{}, err
 	}
 	return output, nil
 }

@@ -20,6 +20,33 @@ CREATE EXTENSION IF NOT EXISTS pg_prewarm;
 SELECT pg_prewarm('accounts');
 SELECT pg_prewarm('transactions');
 
+CREATE OR REPLACE FUNCTION get_balance(p_account_id INTEGER) RETURNS JSON AS $$
+DECLARE
+  v_balance INTEGER;
+  v_account_limit INTEGER;
+  json_response JSON;
+BEGIN
+  SELECT balance, account_limit INTO v_balance, v_account_limit FROM accounts WHERE id = p_account_id;
+  SELECT json_build_object(
+    'saldo', json_build_object(
+      'total', v_balance,
+      'data_extrato', TO_CHAR(now(), 'YYYY-MM-DD HH:MI:SS.US'),
+      'limite', v_account_limit
+    ),
+    'ultimas_transacoes', COALESCE((
+      SELECT json_agg(row_to_json(t)) FROM (
+        SELECT amount as valor, operation as tipo, description as descricao, created_at as realizada_em
+        FROM transactions
+        WHERE account_id = p_account_id
+        ORDER BY created_at DESC
+        LIMIT 10
+      ) t
+    ), '[]')
+  ) INTO json_response;
+  RETURN json_response;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE PROCEDURE create_transaction(
   account_id INTEGER,
   amount INTEGER,
